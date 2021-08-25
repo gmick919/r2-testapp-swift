@@ -331,11 +331,13 @@ extension ReaderViewController: VisualNavigatorDelegate {
         // Skips to previous/next pages if the tap is on the content edges.
         let thresholdRange = 0...(0.2 * viewport.width)
         var moved = false
+        /* poly
         if thresholdRange ~= point.x {
             moved = navigator.goLeft(animated: false)
         } else if thresholdRange ~= (viewport.maxX - point.x) {
             moved = navigator.goRight(animated: false)
         }
+        */
         
         if !moved {
             toggleNavigationBar()

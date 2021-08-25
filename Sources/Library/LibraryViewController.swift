@@ -48,7 +48,7 @@ class LibraryViewController: UIViewController, Loggable {
     private var downloadTaskToRatio = [URLSessionDownloadTask:Float]()
     private var downloadTaskDescription = [URLSessionDownloadTask:String]()
     private lazy var addBookButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addBook))
-    
+
     @IBOutlet weak var collectionView: UICollectionView! {
         didSet {
             // The contentInset of collectionVIew might be changed by iOS 9/10.
@@ -139,7 +139,8 @@ class LibraryViewController: UIViewController, Loggable {
     }
     
     @objc func addBook() {
-        let alert = UIAlertController(title: NSLocalizedString("library_add_book_title", comment: "Title for the Add book alert"), message: nil, preferredStyle: .actionSheet)
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "Sign In", style: .default, handler: { _ in self.signIn() }))
         alert.addAction(UIAlertAction(title: NSLocalizedString("library_add_book_from_device_button", comment: "`Add a book from your device` button"), style: .default, handler: { _ in self.addBookFromDevice() }))
         alert.addAction(UIAlertAction(title: NSLocalizedString("library_add_book_from_url_button", comment: "`Add a book from a URL` button"), style: .default, handler: { _ in self.addBookFromURL() }))
         alert.addAction(UIAlertAction(title: NSLocalizedString("cancel_button", comment: "Cancel adding a book from a URL"), style: .cancel))
@@ -205,6 +206,33 @@ class LibraryViewController: UIViewController, Loggable {
         alert.addAction(UIAlertAction(title: NSLocalizedString("cancel_button", comment: "Cancel adding a boom from a URL button"), style: .cancel))
         present(alert, animated: true, completion: nil)
     }
+  
+    //poly...
+  
+  
+  private func signIn() {
+      let alert = UIAlertController(title: "Sign In", message: nil, preferredStyle: .alert)
+      func doIt(_ action: UIAlertAction) {
+          guard let email = alert.textFields?[0].text, let password = alert.textFields?[1].text else
+          {
+              return
+          }
+          LingVisSDK.signIn(email: email, password: password, newAccount: false)
+      }
+      
+      alert.addTextField { textField in
+          textField.placeholder = "email"
+      }
+      alert.addTextField { textField in
+          textField.placeholder = "password"
+      }
+      alert.addAction(UIAlertAction(title: "Sign In", style: .default, handler: doIt))
+      alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+      present(alert, animated: true, completion: nil)
+  }
+  
+  
+    //...poly
     
 }
 

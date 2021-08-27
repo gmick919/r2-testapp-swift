@@ -1,6 +1,5 @@
 //
 //  LingVisSDK.swift
-//  R2Navigator
 //
 
 import Foundation
@@ -79,39 +78,103 @@ class LingVisSDK: NSObject, WKScriptMessageHandler {
   func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
     if message.name != "lingVisSDK" { return }
     guard let msg = message.body as? String else { return }
-    if msg == "ready" {
-      start();
+    if msg == "ready:" {
+      start()
     } else if msg.starts(with: "token:") {
-      let index1 = msg.index(msg.startIndex, offsetBy: 6)
-      LingVisSDK.token = String(msg[index1...])
+      let idx = msg.index(msg.startIndex, offsetBy: 6)
+      let parts = String(msg[idx...]).components(separatedBy: "|")
+      LingVisSDK.token = parts[1]
       LingVisSDK.gotToken = true
-    } else if msg.starts(with: "error:") {
-      let index1 = msg.index(msg.startIndex, offsetBy: 6)
-      let alert = UIAlertController(title: "Error", message: String(msg[index1...]), preferredStyle: UIAlertController.Style.alert)
-      alert.addAction(UIAlertAction(title: "OK", style: UIAlertAction.Style.default, handler: nil))
-      UIApplication.shared.keyWindow?.rootViewController?.present(alert, animated: true, completion: nil)
+      if (parts[0].count > 0) {
+        invokeCallback(callbackId: parts[0], arg: parts[1], error: parts[2])
+      }
+    } else if msg.starts(with: "callback:") {
+      let idx = msg.index(msg.startIndex, offsetBy: 9)
+      let str = String(msg[idx...])
+      let parts = str.components(separatedBy: "|")
+      invokeCallback(callbackId: parts[0], arg: parts[1], error: parts[2])
     }
+  }
+  
+  typealias CallbackFunc = (String, String) -> Void
+  
+  private var callbacks: Dictionary = [String: CallbackFunc]()
+  
+  private func addCallback(callback: @escaping CallbackFunc) -> String {
+    let uuid = UUID().uuidString
+    callbacks[uuid] = callback
+    return uuid
+  }
+  
+  private func invokeCallback(callbackId: String, arg: String, error: String) {
+    let callback = callbacks[callbackId]
+    if callback == nil { return }
+    callbacks.removeValue(forKey: callbackId)
+    callback!(arg, error)
   }
   
   @objc
   private func start() {
     if !LingVisSDK.gotToken {
       perform(#selector(start), with: nil, afterDelay: 0.2)
-      return;
+      return
     }
     let appStr = escape(str: LingVisSDK.app)
     let bookIdStr = escape(str: bookId)
     if bookId.count == 0 {
       LingVisSDK.gotToken = false
     }
-    webView.evaluateJavaScript("lingVisSdk.polyReadiumSignIn('\(LingVisSDK.token)', '', '', '\(appStr)', '\(bookIdStr)')")
+    webView.evaluateJavaScript("lingVisSdk.polyReadiumSignIn('', '\(LingVisSDK.token)', '', '', '\(appStr)', '\(bookIdStr)')")
   }
   
-  class func signIn(email: String, password: String, newAccount: Bool) {
+  enum Error: Swift.Error, CustomStringConvertible {
+      case customError(message: String)
+      var description: String {
+          switch self {
+            case .customError(message: let message): return message
+          }
+      }
+  }
+
+  class func signIn(email: String, password: String, newAccount: Bool, completion: @escaping (Result<String, Error>) -> Void) {
+    let main = LingVisSDK._shared!
+    let callback = main.addCallback(callback: {
+      (arg: String, error: String) -> Void in
+      if error.count > 0 {
+        completion(.failure(.customError(message: error)))
+      } else {
+        completion(.success(""))
+      }
+    })
     LingVisSDK.gotToken = false
-    LingVisSDK._shared!.webView.evaluateJavaScript("lingVisSdk.polyReadiumSignIn('', '\(escape(str: email))', '\(escape(str: password))', '', '', \(newAccount))")
+    main.webView.evaluateJavaScript("lingVisSdk.polyReadiumSignIn('\(callback)', '', '\(escape(str: email))', '\(escape(str: password))', '', '', \(newAccount))")
   }
   
+  class func getSettings(completion: @escaping (Result<String, Error>) -> Void) {
+    let main = LingVisSDK._shared!
+    let callback = main.addCallback(callback: {
+      (arg: String, error: String) -> Void in
+      if error.count > 0 {
+        completion(.failure(.customError(message: error)))
+      } else {
+        completion(.success(arg))
+      }
+    })
+    main.webView.evaluateJavaScript("lingVisSdk.polyReadiumGetSettings('\(callback)')")
+  }
+
+  class func updateSettings(l2: String, l1: String, level: String, completion: @escaping (Result<String, Error>) -> Void) {
+    let main = LingVisSDK._shared!
+    let callback = main.addCallback(callback: {
+      (arg: String, error: String) -> Void in
+      if error.count > 0 {
+        completion(.failure(.customError(message: error)))
+      } else {
+        completion(.success(arg))
+      }
+    })
+    main.webView.evaluateJavaScript("lingVisSdk.polyReadiumUpdateSettings('\(callback)', '\(l2)', '\(l1)', '\(level)')")
+  }
   
 }
 

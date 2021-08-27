@@ -13,6 +13,8 @@ import MBProgressHUD
 func toast(_ text: String, on view: UIView, duration: TimeInterval) {
     let hud = MBProgressHUD.showAdded(to: view, animated: true)
     hud.mode = .text
+    hud.label.lineBreakMode = .byWordWrapping
+    hud.label.numberOfLines = 0
     hud.label.text = text
     hud.hide(animated: true, afterDelay: duration)
 }

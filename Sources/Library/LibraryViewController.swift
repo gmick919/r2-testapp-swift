@@ -210,7 +210,7 @@ class LibraryViewController: UIViewController, Loggable {
         present(alert, animated: true, completion: nil)
     }
   
-    //poly...
+  //LingVisSDK...
   
   private func signIn() {
     signInInt(newAccount: false)
@@ -299,9 +299,8 @@ class LibraryViewController: UIViewController, Loggable {
       alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
       present(alert, animated: true, completion: nil)
   }
-  
 
-    //...poly
+  //...LingVisSDK
     
 }
 

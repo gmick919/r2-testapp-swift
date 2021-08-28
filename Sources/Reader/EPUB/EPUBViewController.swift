@@ -20,7 +20,7 @@ class EPUBViewController: ReaderViewController {
     var userSettingNavigationController: UserSettingsNavigationController
 
     init(publication: Publication, book: Book, resourcesServer: ResourcesServer) {
-        publication.webViewHook = LingVisSDK.getHook(publication: publication) //poly
+        publication.webViewHook = LingVisSDK.getHook(publication: publication)
         
         let navigator = EPUBNavigatorViewController(publication: publication, initialLocation: book.progressionLocator, resourcesServer: resourcesServer)
 

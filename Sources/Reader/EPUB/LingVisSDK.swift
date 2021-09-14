@@ -11,8 +11,19 @@ class LingVisSDK: NSObject, WKScriptMessageHandler {
   private static var app = ""
   private static var token = ""
   private static var gotToken = true
+  private static var currLang = ""
+  private static var updating = false
+  private static var updatingInternal = false
+  public static var willChangeLanguage: ((Publication) -> ChangeLanguageParams)? = nil
+  public static var didChangeLanguage: ((Result<String, Error>) -> Void)? = nil
   private var webView: WKWebView
   private var bookId: String
+  
+  struct ChangeLanguageParams {
+    var l2 = ""
+    var l1 = ""
+    var proceed = true
+  }
   
   class func prepare(app: String) {
     LingVisSDK.app = app
@@ -43,6 +54,37 @@ class LingVisSDK: NSObject, WKScriptMessageHandler {
   }
   
   class func getHook(publication: Publication) -> (_: WKWebView) -> AnyObject {
+    var lang = publication.metadata.languages.first ?? ""
+    lang = lang.components(separatedBy: "-")[0]
+    if (lang != currLang) {
+      var l1 = ""
+      var proceed = true
+      if willChangeLanguage != nil {
+        let params = willChangeLanguage!(publication)
+        proceed = params.proceed
+        if params.l2 != "" {
+          lang = params.l2
+        }
+        if params.l1 != "" {
+          l1 = params.l1
+        }
+      }
+      if proceed {
+        LingVisSDK.updatingInternal = true
+        LingVisSDK.updateSettings(l2: lang, l1: l1, level: "", completion: { result in
+          LingVisSDK.updatingInternal = false
+          switch result {
+            case .success:
+              LingVisSDK.updating = false
+            case .failure:
+              break
+          }
+          if didChangeLanguage != nil {
+            didChangeLanguage!(result)
+          }
+        })
+      }
+    }
     return {
       (webView: WKWebView) -> AnyObject in
         let id = publication.metadata.identifier ?? ""
@@ -85,7 +127,7 @@ class LingVisSDK: NSObject, WKScriptMessageHandler {
       let parts = String(msg[idx...]).components(separatedBy: "|")
       LingVisSDK.token = parts[1]
       LingVisSDK.gotToken = true
-      if (parts[0].count > 0) {
+      if parts[0].count > 0 {
         invokeCallback(callbackId: parts[0], arg: parts[1], error: parts[2])
       }
     } else if msg.starts(with: "callback:") {
@@ -115,7 +157,7 @@ class LingVisSDK: NSObject, WKScriptMessageHandler {
   
   @objc
   private func start() {
-    if !LingVisSDK.gotToken {
+    if !LingVisSDK.gotToken || LingVisSDK.updating {
       perform(#selector(start), with: nil, afterDelay: 0.2)
       return
     }
@@ -167,12 +209,21 @@ class LingVisSDK: NSObject, WKScriptMessageHandler {
     let main = LingVisSDK._shared!
     let callback = main.addCallback(callback: {
       (arg: String, error: String) -> Void in
+      if !LingVisSDK.updatingInternal  {
+        LingVisSDK.updating = false
+      }
       if error.count > 0 {
         completion(.failure(.customError(message: error)))
       } else {
+        if l2 != "" {
+          LingVisSDK.currLang = l2
+        }
         completion(.success(arg))
       }
     })
+    if l2 != "" {
+      LingVisSDK.updating = true
+    }
     main.webView.evaluateJavaScript("lingVisSdk.polyReadiumUpdateSettings('\(callback)', '\(l2)', '\(l1)', '\(level)')")
   }
   

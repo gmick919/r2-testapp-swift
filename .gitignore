@@ -54,3 +54,4 @@ playground.xcworkspace
 
 # IntelliJ's AppCode
 .idea
+.DS_Store
